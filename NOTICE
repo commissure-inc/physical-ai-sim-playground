@@ -1,0 +1,123 @@
+physical-ai-sim-playground
+Copyright 2026 Commissure Inc.
+
+This repository builds a static site. The site is the mjswan viewer plus scenes
+and policies fetched at build time from the projects below. Their license terms
+are unchanged by being listed here. Per-scene LICENSE and NOTICE files written
+into dist/ by the build sit beside the bytes they cover. The viewer also writes
+dist/THIRD_PARTY_LICENSES.md for packages bundled into the browser engine, and
+dist/LICENSE is mjswan's own Apache-2.0 license.
+
+v1 does not ship assets whose terms are non-commercial, no-derivatives, or
+unstated. microduck's STL meshes (recorded as CC BY-NC-SA 4.0) and the LAFAN1
+dance clip (CC BY-NC-ND 4.0) are not in the build. See the notes below.
+
+--------------------------------------------------------------------------------
+mjswan
+https://github.com/ttktjmt/mjswan
+License: Apache-2.0
+
+Browser viewer (MuJoCo WASM, ONNX Runtime Web, three.js). Commercial use and
+company pages are asked to keep the swan icon in the control panel and the
+dialog it opens. This project does not remove them.
+
+MuJoCo itself (the simulator compiled to WASM) is Apache-2.0:
+https://github.com/google-deepmind/mujoco
+
+The engine build writes dist/THIRD_PARTY_LICENSES.md. From the build made
+with mjswan 0.12.8, that file identifies:
+
+- @ttktjmt/mujoco 3.11.0, Apache-2.0
+- onnxruntime-web 1.29.0, MIT
+- three 0.181.2, MIT
+- jszip 3.10.1, SPDX "MIT OR GPL-3.0-or-later"
+
+jszip is dual-licensed. This site uses it under MIT. Other bundled packages
+are in the same file. Read it rather than this list if the mjswan version
+changes.
+
+--------------------------------------------------------------------------------
+mjswan_playground
+https://github.com/ttktjmt/mjswan_playground
+License: Apache-2.0
+
+Task builders. v1 depends on commit fc1c034ee5dd29baf60a52b275fef8a46def4426.
+PyPI release 0.1.0 does not contain the leap task, so the dependency is the
+git commit, not that release.
+
+--------------------------------------------------------------------------------
+unitree_rl_mjlab
+https://github.com/unitreerobotics/unitree_rl_mjlab
+License: Apache-2.0 (upstream spells the filename LICENCE)
+
+The G1 velocity-walking policy only. The dance policy and the LAFAN1 clip are
+not built.
+
+--------------------------------------------------------------------------------
+Unitree G1 (MuJoCo Menagerie unitree_g1)
+https://github.com/google-deepmind/mujoco_menagerie/tree/main/unitree_g1
+License: BSD-3-Clause
+Copyright (c) 2016-2023 HangZhou YuShu TECHNOLOGY CO.,LTD. ("Unitree Robotics")
+
+The same meshes are used by the pacman scenes.
+
+--------------------------------------------------------------------------------
+booster_deploy
+https://github.com/BoosterRobotics/booster_deploy
+License: Apache-2.0
+
+K1 walk only. The dance and fight scenes that repository ships are removed from
+the site, because it does not name a source dataset for those two clips. The K1
+tasks in booster_mjlab are not built: that repository states no license.
+
+--------------------------------------------------------------------------------
+booster_assets
+https://github.com/BoosterRobotics/booster_assets
+License: BSD-3-Clause
+
+K1 MJCF and meshes.
+
+--------------------------------------------------------------------------------
+luwu_mjlab
+https://github.com/LuwuDynamics/luwu_mjlab
+License: Apache-2.0 (upstream spells the filename LICENCE)
+
+XGO Mini2S, Mini2SW, and Lite3 walking, and the Mini2S and Mini2SW get-up
+policies' task configs. The get-up scenes are Mini2S-Turn-Flat and
+Mini2SW-Turn-Flat.
+
+--------------------------------------------------------------------------------
+robomotic/XGO
+https://huggingface.co/robomotic/XGO
+License: Apache-2.0
+
+The five policy.onnx files the luwu scenes load.
+
+--------------------------------------------------------------------------------
+perceptive_cbf_rl (PAC-MAN)
+https://github.com/lzyang2000/perceptive_cbf_rl
+License: MIT
+
+G1 dodgeball and the locomotion policy from the same stack. The retargeted
+motion clips the prior trained on are not in this build.
+
+--------------------------------------------------------------------------------
+in-hand-rotation-mjlab (LEAP hand cube rotation)
+https://github.com/Msornerrrr/in-hand-rotation-mjlab
+License: Apache-2.0
+Copyright 2025, The mjlab Developers
+
+Task code and the sample checkpoint ckpts/leap_left_custom_model_4900.pt.
+No separate weights license was found in that repository; the checkpoint is
+shipped inside the Apache-2.0 tree. The task follows the HORA task design
+(https://github.com/haozhiqi/hora) without vendoring that repository.
+
+--------------------------------------------------------------------------------
+LEAP Hand model
+https://github.com/leap-hand/LEAP_Hand_Sim
+License: MIT
+Copyright 2023 Ananye Agarwal
+
+Vendored at in-hand-rotation-mjlab
+src/in_hand_rotation_mjlab/robots/leap_hand/xmls/LICENSE, which is the MIT
+text above. Confirmed from that file, not from a SPDX guess.

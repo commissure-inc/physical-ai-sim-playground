@@ -1,0 +1,21 @@
+# Built site and per-task staging (uv run build)
+dist/
+build/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node. mjswan downloads its own toolchain into .venv; this catches a local install.
+node_modules/
+
+# Upstream checkouts, if a task is pointed at this repo instead of the user cache
+.cache/
+
+.DS_Store
+MUJOCO_LOG.TXT

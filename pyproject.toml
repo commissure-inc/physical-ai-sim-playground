@@ -1,0 +1,32 @@
+[project]
+name = "physical-ai-sim-playground"
+version = "0.1.0"
+description = "Browser-only MuJoCo playground for the physical-AI training session"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11,<3.13"
+authors = [{ name = "Commissure Inc." }]
+dependencies = [
+    "huggingface_hub>=0.26.0",
+    "mjswan-playground",
+    # mjswan 0.12.8 records the scene GUI against an mj_model stub with no
+    # `ncam`. mjviser 0.0.16 reads that field and the build stops in
+    # write_manifest. 0.0.14 is the version this mjswan_playground commit locks.
+    "mjviser==0.0.14",
+]
+
+[project.scripts]
+build = "physical_ai_sim_playground.cli:build"
+serve = "physical_ai_sim_playground.cli:serve"
+verify = "physical_ai_sim_playground.cli:verify"
+
+[project.urls]
+GitHub = "https://github.com/commissure-inc/physical-ai-sim-playground"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+# PyPI 0.1.0 predates the leap task. Pin the commit this v0 was written against.
+mjswan-playground = { git = "https://github.com/ttktjmt/mjswan_playground", rev = "fc1c034ee5dd29baf60a52b275fef8a46def4426" }

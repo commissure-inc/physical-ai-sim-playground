@@ -1,0 +1,62 @@
+# Deploy dist/ to GitHub Pages.
+# This workflow does not enable Pages. In the repository settings, set
+# Pages → Build and deployment → Source to "GitHub Actions" before it can publish.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # Task builders clone pinned upstream checkouts here when the package
+      # is installed (there is no pyproject.toml beside the installed copy).
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/mjswan_playground
+          key: playground-${{ hashFiles('uv.lock', 'pyproject.toml') }}
+
+      - name: Install
+        run: uv sync --frozen
+
+      - name: Build
+        run: uv run build
+        env:
+          MJSWAN_BASE_PATH: /${{ github.event.repository.name }}/
+          MUJOCO_GL: disable
+          GIT_TERMINAL_PROMPT: "0"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
