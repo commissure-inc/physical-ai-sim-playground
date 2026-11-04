@@ -6,7 +6,8 @@ Three things are added to the built ``index.html``:
   URL says otherwise;
 - a script that renames the labels the viewer draws itself, hides the rows an attendee
   does not need (field of view, the policy picker...), and starts the pointer in Push;
-- the lesson bar (reset, two counters) and a short "how to play" card.
+- the lesson bar (reset, two counters), a short "how to play" card, and a tab that
+  switches to the coefficient page at ``physics/`` (see ``physics.py``).
 
 The swan logo and the About dialog it opens are left untouched, as mjswan asks of
 company pages. Nothing here talks to a server; the tally lives in the page.
@@ -32,7 +33,11 @@ _HEAD = MARK + """
 })();
 </script>"""
 
-_BODY = r"""<div id="lesson-help" role="dialog" aria-labelledby="lesson-help-title" hidden>
+_BODY = r"""<nav id="lesson-nav" aria-label="ページの切り替え">
+  <span aria-current="page">ロボットで遊ぶ</span>
+  <a href="./physics/" id="lesson-nav-physics">係数を変える</a>
+</nav>
+<div id="lesson-help" role="dialog" aria-labelledby="lesson-help-title" hidden>
   <div class="lesson-card">
     <h2 id="lesson-help-title">遊び方</h2>
     <ol>
@@ -81,11 +86,12 @@ _BODY = r"""<div id="lesson-help" role="dialog" aria-labelledby="lesson-help-tit
     bottom: 16px;
     transform: translateX(-50%);
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: center;
     gap: 8px;
     align-items: center;
     max-width: calc(100vw - 32px);
+    box-sizing: border-box;
     padding: 8px 12px;
     border-radius: 12px;
     background: var(--lesson-bg);
@@ -94,6 +100,7 @@ _BODY = r"""<div id="lesson-help" role="dialog" aria-labelledby="lesson-help-tit
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
   }
   .lesson-btn {
+    white-space: nowrap;
     font: inherit;
     font-weight: 600;
     color: inherit;
@@ -113,6 +120,7 @@ _BODY = r"""<div id="lesson-help" role="dialog" aria-labelledby="lesson-help-tit
     outline-offset: 2px;
   }
   .lesson-link {
+    white-space: nowrap;
     font: inherit;
     font-size: 13px;
     color: var(--lesson-muted);
@@ -130,6 +138,29 @@ _BODY = r"""<div id="lesson-help" role="dialog" aria-labelledby="lesson-help-tit
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
+  #lesson-nav {
+    position: fixed;
+    z-index: 10000;
+    top: 16px;
+    left: 16px;
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 10px;
+    background: var(--lesson-bg);
+    font: 600 14px/1.2 var(--lesson-font);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  }
+  #lesson-nav a, #lesson-nav span {
+    padding: 7px 12px;
+    border-radius: 8px;
+    color: var(--lesson-muted);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  #lesson-nav a:hover { color: var(--lesson-fg); background: rgba(255, 255, 255, 0.08); }
+  #lesson-nav [aria-current="page"] { color: #fff; background: var(--lesson-accent); }
+  #lesson-nav a:focus-visible { outline: 2px solid #9cc3ff; outline-offset: 2px; }
   #lesson-help {
     position: fixed;
     inset: 0;
@@ -166,6 +197,9 @@ _BODY = r"""<div id="lesson-help" role="dialog" aria-labelledby="lesson-help-tit
     border-radius: 8px;
     padding: 8px 20px;
     cursor: pointer;
+  }
+  @media (max-width: 760px) {
+    #lesson-bar { flex-wrap: wrap; }
   }
   @media (max-width: 640px) {
     #lesson-bar { bottom: 8px; padding: 6px 8px; gap: 6px; font-size: 14px; }
@@ -205,6 +239,9 @@ _BODY = r"""<div id="lesson-help" role="dialog" aria-labelledby="lesson-help-tit
   var seen = false;
   try { seen = window.localStorage.getItem(SEEN) === "1"; } catch (e) {}
   if (!seen && !/[?&]help=0(&|$)/.test(window.location.search)) openHelp();
+  if (/[?&]help=0(&|$)/.test(window.location.search)) {
+    document.getElementById("lesson-nav-physics").href = "./physics/?help=0";
+  }
 
   // ---- the viewer's own labels ----
   // [text, where it sits ("LABEL", "SPAN", "DIV"; "" = anywhere), replacement]
@@ -246,7 +283,7 @@ _BODY = r"""<div id="lesson-help" role="dialog" aria-labelledby="lesson-help-tit
     var node, todo = [];
     while ((node = walker.nextNode())) {
       var parent = node.parentElement;
-      if (!parent || parent.closest("#lesson-bar, #lesson-help, script, style, noscript")) continue;
+      if (!parent || parent.closest("#lesson-bar, #lesson-help, #lesson-nav, script, style, noscript")) continue;
       todo.push(node);
     }
     todo.forEach(function (n) {

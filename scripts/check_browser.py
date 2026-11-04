@@ -48,6 +48,11 @@ window.__stepProbe = {messages: 0, waits: 0};
 """
 SETTLE_SECONDS = 3
 
+# Scenes of the coefficient page (physics/src/experiments.js SCENES). The first four
+# are experiments and must show a reading at the bottom left.
+PHYSICS_SCENES = ("ramp", "bounce", "mass", "timestep", "mug", "hand", "cloth", "humanoid")
+PHYSICS_EXPERIMENTS = PHYSICS_SCENES[:4]
+
 
 class _Quiet(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format: str, *args) -> None:
@@ -105,6 +110,9 @@ def main() -> None:
                         )
                         first = False
                         failed = failed or problem is not None
+                for scene_id in PHYSICS_SCENES:
+                    problem = _check_physics(browser, origin, scene_id, PlaywrightError)
+                    failed = failed or problem is not None
                 browser.close()
             server.shutdown()
     raise SystemExit(1 if failed else 0)
@@ -201,10 +209,56 @@ def _check(
     return problem
 
 
+def _check_physics(browser, origin: str, scene_id: str, playwright_error: type) -> str | None:
+    errors: list[str] = []
+    failed: list[str] = []
+    page = browser.new_page(viewport={"width": 1280, "height": 800})
+    page.on("pageerror", lambda exc: errors.append(str(exc)))
+    page.on("console", lambda msg: errors.append(msg.text) if msg.type == "error" else None)
+    page.on("response", lambda response: _note_http(response, failed))
+    start = time.monotonic()
+    page.goto(f"{origin}physics/?help=0&scene={scene_id}")
+    state = "timed out"
+    try:
+        page.wait_for_function("() => window.__physicsReady", timeout=READY_TIMEOUT_MS)
+        state = "ready"
+    except playwright_error:
+        pass
+    reading = ""
+    if state == "ready":
+        page.wait_for_timeout(SETTLE_SECONDS * 1000)
+        reading = page.inner_text("#readout").strip()
+        lesson = page.inner_text("#lesson-text").strip()
+        body = page.inner_text("body")
+        if not lesson:
+            errors.append("lesson text is empty")
+        if scene_id in PHYSICS_EXPERIMENTS and not reading:
+            errors.append("no reading at the bottom left")
+        for english in ("Simulation", "Example Scene", "Pause Simulation", "Noise"):
+            if english in body:
+                errors.append(f"English label still shown: {english}")
+        if page.evaluate("() => !document.getElementById('loading').hidden"):
+            errors.append("loading message still shown")
+        if scene_id == PHYSICS_SCENES[0]:
+            # The tab back to the robot page resolves inside the site.
+            href = page.evaluate("() => document.querySelector('#lesson-nav a').href")
+            if not href.startswith(origin):
+                errors.append(f"tab back points outside the site: {href}")
+    seconds = time.monotonic() - start
+    page.close()
+    problem = state if state != "ready" else (errors[0] if errors else (failed[0] if failed else None))
+    label = "FAIL" if problem else "ok"
+    title = f"physics/{scene_id}"
+    print(f"{label:<5}{title:<42}{seconds:6.1f}s  {reading[:40]}  {problem or 'ready'}")
+    for error in errors[1:8]:
+        print(f"      {error}")
+    return problem
+
+
 def _exercise_lesson(page, errors: list[str]) -> None:
     page.wait_for_timeout(1500)
     body = page.inner_text("body")
-    for japanese in ("状況", "マウスで触る", "自分で操作"):
+    for japanese in ("状況", "マウスで触る", "自分で操作", "係数を変える"):
         if japanese not in body:
             errors.append(f"Japanese label missing: {japanese}")
     for english in ("lin_vel_x", "Interact", "Debug Viz", "FOV", "Max lin_vel_x"):

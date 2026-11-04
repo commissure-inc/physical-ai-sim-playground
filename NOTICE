@@ -2,7 +2,8 @@ physical-ai-sim-playground
 Copyright 2026 Commissure Inc.
 
 This repository builds a static site. The site is the mjswan viewer plus scenes
-and policies fetched at build time from the projects below. Their license terms
+and policies fetched at build time from the projects below, and a second page
+(physics/) adapted from zalo/mujoco_wasm. Their license terms
 are unchanged by being listed here. Per-scene LICENSE and NOTICE files written
 into dist/ by the build sit beside the bytes they cover. The viewer also writes
 dist/THIRD_PARTY_LICENSES.md for packages bundled into the browser engine, and
@@ -121,3 +122,32 @@ Copyright 2023 Ananye Agarwal
 Vendored at in-hand-rotation-mjlab
 src/in_hand_rotation_mjlab/robots/leap_hand/xmls/LICENSE, which is the MIT
 text above. Confirmed from that file, not from a SPDX guess.
+
+--------------------------------------------------------------------------------
+mujoco_wasm (the coefficient page, physics/)
+https://github.com/zalo/mujoco_wasm
+License: MIT
+Copyright (c) 2017 Konstantin Gredeskoul (as stated in that repository's LICENSE,
+copied to physics/LICENSE-mujoco_wasm)
+
+physics/src/ is that repository's viewer (main.js, mujocoUtils.js, utils/) with
+the panel translated and trimmed, plus experiments.js, written for this site.
+Taken from commit f6b202ca29bc1706e4db583edf732c4a0902c27b. The four exp_*.xml
+scenes are written for this site. mug.xml, mug.obj, mug.png, hammock.xml and
+humanoid.xml are the copies shipped in that repository; hammock.xml and
+humanoid.xml carry DeepMind's Apache-2.0 header.
+hammock.xml drops the flex contact attribute internal="false", which the
+MuJoCo 3.17 wasm build no longer accepts; nothing else in it is changed.
+
+The libraries the page loads are fetched from the npm registry at build time:
+
+- three 0.181.2, MIT (dist/physics/lib/three/LICENSE)
+- @mujoco/mujoco 3.17.0, Apache-2.0 (dist/physics/lib/mujoco/NOTICE; the
+  package ships no LICENSE file, its package.json states Apache-2.0)
+
+--------------------------------------------------------------------------------
+Shadow Hand E3M5 (MuJoCo Menagerie shadow_hand)
+https://github.com/google-deepmind/mujoco_menagerie/tree/main/shadow_hand
+License: Apache-2.0 (physics/scenes/shadow_hand/LICENSE)
+
+The right hand only, as shipped in mujoco_wasm.

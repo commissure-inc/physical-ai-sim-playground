@@ -12,6 +12,7 @@ uv run build          # writes dist/; local base path is /
 uv run serve          # http://127.0.0.1:8080/  (mjswan serve, with COOP/COEP)
 uv run verify         # plain static server, HTTP 200 for index, logo, wasm, onnx, mjz
 uvx --from playwright python scripts/check_browser.py dist
+uv run python scripts/check_physics.py   # the four coefficient experiments
 ```
 
 `uv run build` runs one process per task (`unitreerl`, `booster`, `luwu`, `pacman`, `leap`) and merges them with mjswan_playground's site merge. `luwu` downloads its ONNX policies from the Hugging Face Hub, so `huggingface_hub` is a dependency. `unitreerl` builds only the G1 velocity walk (the LAFAN1 dance scene is not built). `booster` and `unitreerl` then copy that walk into lesson scenes: 氷の床, 軽い荷物, 重い荷物, 段差, 坂. If one task fails, the reason is printed and the others still build. The process exits 1 when any task failed or the license scan finds a non-commercial, no-derivatives, GPL, CERN-OHL, or missing license on a shipped asset. `dist/` then contains only the tasks that built.
@@ -38,5 +39,9 @@ Floor friction, payload, a step, and a slope are separate scenes, not a live sli
 ## UI (Japanese)
 
 After the merge, `localize.py` rewrites `dist/manifest.json`: Japanese project/scene/command labels, project order, the `Max ...` companion sliders removed, command panels with no slider removed (get-up scenes), and the K1 dance/fight scenes dropped (their clips name no source dataset). `overlay.py` then injects into `index.html`: `?debug=0` by default, a text-node renamer for labels the stock viewer draws itself (`Scene`, `Interact`, `Push`, `Reset`...), hidden rows (FOV, policy picker, All envs), the pointer starting in Push with the Interact folder open, the lesson bar, and a help card (`?help=0` skips it). The swan logo and its About dialog are untouched. If a new mjswan version renames its labels, `scripts/check_browser.py` fails on English labels still shown. The step-rate probe lives in `scripts/check_browser.py` (injected with `add_init_script`), not in the shipped page.
+
+## Coefficient page (`physics/`)
+
+A second page, linked from a tab at the top left of both pages. It is zalo/mujoco_wasm (MIT) with four experiments added: friction on a 20° ramp, damping ratio on a bouncing ball, mass of a pushed box, and the time step against a thin wall. Sources and scenes are committed under `physics/`; `physics.py` copies them to `dist/physics/` and fetches three and @mujoco/mujoco from the npm registry at pinned versions and sha512 (nothing from npm is committed). `?scene=` picks a scene by id. `experiments.js` and `scripts/check_physics.py` must agree on the scene fields and the values: change both. The page sets `window.__physicsReady` when it is up; `check_browser.py` waits for it.
 
 Curriculum text is still later. Do not add it here.

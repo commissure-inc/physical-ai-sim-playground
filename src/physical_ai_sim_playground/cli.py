@@ -41,7 +41,8 @@ def build() -> None:
     parser = argparse.ArgumentParser(
         prog="build",
         description=(
-            "Build the walking lessons, luwu, pacman, and leap into one static site at dist/."
+            "Build the walking lessons, luwu, pacman, leap, and the coefficient page "
+            "into one static site at dist/."
         ),
     )
     parser.add_argument(
@@ -155,6 +156,15 @@ def run_build(base_path: str) -> int:
     localize(site)
     projects = json.loads((site / "manifest.json").read_text())["projects"]
     inject(site / "index.html")
+
+    from physical_ai_sim_playground.physics import install as install_physics
+
+    try:
+        install_physics(root, site)
+    except Exception as exc:  # network, hash mismatch, missing file
+        print(f"\nCould not add the coefficient page: {exc}", file=sys.stderr)
+        _print_failures(failed)
+        return 1
     print("\n=== site ===", flush=True)
     for project in projects:
         nbytes = size(site / project["id"])
@@ -166,6 +176,7 @@ def run_build(base_path: str) -> int:
             scene_dir = site / project["id"] / scene["id"]
             if scene_dir.is_dir():
                 print(f"  {scene['id']:<32} {size(scene_dir) / 1e6:8.1f} MB", flush=True)
+    print(f"{'physics (coefficient page)':<28} {size(site / 'physics') / 1e6:8.1f} MB", flush=True)
     site_bytes = size(site)
     print(f"{'dist/, engine included':<28} {site_bytes / 1e6:8.1f} MB", flush=True)
     print(f"wrote {site}", flush=True)
@@ -226,11 +237,23 @@ def run_verify(dist: Path) -> int:
         print('ok  viewer bundle contains "powered by mjswan"')
 
     page = index.read_text(errors="ignore")
-    for label in ("最初から", "立て直した", "倒れた"):
+    for label in ("最初から", "立て直した", "倒れた", "係数を変える"):
         if label not in page:
             problems.append(f"index.html has no lesson control {label}")
         else:
             print(f"ok  lesson control {label}")
+    physics = dist / "physics"
+    for rel in (
+        "index.html",
+        "src/main.js",
+        "lib/three/three.module.js",
+        "lib/three/three.core.js",
+        "lib/mujoco/mujoco.js",
+        "lib/mujoco/mujoco.wasm",
+        "scenes/exp_ramp.xml",
+    ):
+        if not (physics / rel).is_file():
+            problems.append(f"physics/{rel} is missing (coefficient page)")
     from physical_ai_sim_playground.licenses import problems as license_problems
 
     found = license_problems(dist)
@@ -359,7 +382,13 @@ def _mount(dist: Path, base: str) -> tuple[Path, Path | None]:
 
 def _asset_rels(dist: Path) -> list[str]:
     """Paths relative to the site root for the page and the simulator's files."""
-    names = ["index.html", "logo.svg", "manifest.json", "THIRD_PARTY_LICENSES.md"]
+    names = [
+        "index.html",
+        "logo.svg",
+        "manifest.json",
+        "THIRD_PARTY_LICENSES.md",
+        "physics/index.html",
+    ]
     suffixes = {".wasm", ".onnx", ".mjz", ".js", ".npz"}
     rels: list[str] = []
     seen: set[str] = set()
@@ -377,6 +406,12 @@ def _asset_rels(dist: Path) -> list[str]:
     for path in dist.rglob("*"):
         if path.is_file() and path.suffix.lower() in suffixes and "node_modules" not in path.parts:
             add(path)
+    # The coefficient page fetches its scenes by name, so request every one of them.
+    scenes = dist / "physics" / "scenes"
+    if scenes.is_dir():
+        for path in sorted(scenes.rglob("*")):
+            if path.is_file() and path.suffix.lower() in {".xml", ".obj", ".png"}:
+                add(path)
     return rels
 
 
@@ -391,6 +426,8 @@ def _referenced(index_html: str, base: str) -> list[str]:
         if path.startswith("./"):
             path = path[2:]
         path = path.lstrip("/")
+        if path.endswith("/"):
+            path += "index.html"  # a link to a page directory, e.g. ./physics/
         if path:
             rels.append(path)
     return rels

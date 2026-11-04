@@ -1,0 +1,18 @@
+<mujoco model="exp_ramp">
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.35 0.35 0.35" specular="0 0 0"/>
+  </visual>
+  <worldbody>
+    <light pos="0 -1.5 2" dir="0 0.4 -1" directional="true"/>
+    <geom name="floor" type="plane" size="2 2 0.1" rgba="0.92 0.92 0.9 1" friction="1 0.005 0.0001"/>
+    <body name="ramp" pos="0 0 0.35" euler="0 -20 0">
+      <geom name="ramp" type="box" size="0.7 0.28 0.02" rgba="0.55 0.58 0.62 1" friction="0.5 0.005 0.0001"/>
+    </body>
+    <body name="box" pos="0.16 0 0.50" euler="0 -20 0">
+      <freejoint/>
+      <inertial pos="0 0 0" mass="0.4" diaginertia="0.0008 0.0008 0.0008"/>
+      <geom name="box" type="box" size="0.04 0.04 0.04" rgba="0.86 0.38 0.22 1" friction="0.5 0.005 0.0001"/>
+    </body>
+  </worldbody>
+</mujoco>
