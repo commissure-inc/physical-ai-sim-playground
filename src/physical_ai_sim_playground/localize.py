@@ -85,4 +85,15 @@ def localize(site: Path) -> None:
                         # The "Max ..." companion sliders only rescale the drag range.
                         item.pop("adjustable_range", None)
 
+    # The environment sliders (env.py): one reset-only plugin event in every MDP.
+    from physical_ai_sim_playground.env import EVENT_NAME, PLUGIN_FILE
+
+    manifest["plugins"] = PLUGIN_FILE
+    for project in projects:
+        for scene in project["scenes"]:
+            for mdp in scene.get("mdps", []):
+                events = mdp.setdefault("events", [])
+                if not any(e.get("name") == EVENT_NAME for e in events):
+                    events.append({"name": EVENT_NAME})
+
     path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")

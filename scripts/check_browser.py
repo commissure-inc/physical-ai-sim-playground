@@ -271,6 +271,18 @@ def _exercise_lesson(page, errors: list[str]) -> None:
     )
     if not push:
         errors.append("pointer mode did not start in 押す")
+    # Environment sliders (env.py): a slider move must reach the running model.
+    written = page.evaluate(
+        "() => { const e = document.getElementById('env-friction'); e.value = '0.1';"
+        " e.dispatchEvent(new Event('input')); const h = window.__paspModel;"
+        " return h && h.mjModel ? h.mjModel.geom_friction[0] : null; }"
+    )
+    if written is None or abs(written - 0.1) > 1e-6:
+        errors.append(f"friction slider did not reach the model: {written}")
+    page.click("#env-reset")
+    for japanese in ("環境の条件", "床の摩擦", "荷物の重さ", "ロボットで試す"):
+        if japanese not in page.inner_text("body"):
+            errors.append(f"Japanese label missing: {japanese}")
     page.click("#lesson-up")
     page.click("#lesson-down")
     text = page.inner_text("#lesson-tally")

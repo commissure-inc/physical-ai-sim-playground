@@ -6,8 +6,10 @@ Three things are added to the built ``index.html``:
   URL says otherwise;
 - a script that renames the labels the viewer draws itself, hides the rows an attendee
   does not need (field of view, the policy picker...), and starts the pointer in Push;
-- the lesson bar (reset, two counters), a short "how to play" card, and a tab that
-  switches to the coefficient page at ``physics/`` (see ``physics.py``).
+- the lesson bar (reset, two counters), a short "how to play" card, a tab that
+  switches to the coefficient page at ``physics/`` (see ``physics.py``), and the
+  "環境の条件" panel: live sliders for floor friction, payload and gravity, written into
+  the running model that the plugin event of ``env.py`` hands to the page.
 
 The swan logo and the About dialog it opens are left untouched, as mjswan asks of
 company pages. Nothing here talks to a server; the tally lives in the page.
@@ -34,14 +36,38 @@ _HEAD = MARK + """
 </script>"""
 
 _BODY = r"""<nav id="lesson-nav" aria-label="ページの切り替え">
-  <span aria-current="page">ロボットで遊ぶ</span>
+  <span aria-current="page">ロボットで試す</span>
   <a href="./physics/" id="lesson-nav-physics">係数を変える</a>
 </nav>
+<section id="lesson-env" aria-labelledby="lesson-env-title">
+  <button type="button" id="lesson-env-toggle" aria-expanded="true">
+    <span id="lesson-env-title">環境の条件</span><span class="lesson-env-caret" aria-hidden="true">▾</span>
+  </button>
+  <div id="lesson-env-body">
+    <label class="lesson-env-row" for="env-friction">
+      <span class="lesson-env-name">床の摩擦</span>
+      <span class="lesson-env-value" id="env-friction-value">シーンのまま</span>
+    </label>
+    <input type="range" id="env-friction" min="0.05" max="1.5" step="0.05" value="1">
+    <label class="lesson-env-row" for="env-payload">
+      <span class="lesson-env-name">荷物の重さ</span>
+      <span class="lesson-env-value" id="env-payload-value">なし</span>
+    </label>
+    <input type="range" id="env-payload" min="0" max="80" step="5" value="0">
+    <label class="lesson-env-row" for="env-gravity">
+      <span class="lesson-env-name">重力（地球＝1）</span>
+      <span class="lesson-env-value" id="env-gravity-value">1.0</span>
+    </label>
+    <input type="range" id="env-gravity" min="0.2" max="2" step="0.1" value="1">
+    <button type="button" id="env-reset" class="lesson-link">シーンのままに戻す</button>
+    <p class="lesson-env-note">値を変えると、その場で反映される。「最初から」を押しても、変えた値のまま。状況を切り替えると元に戻る。</p>
+  </div>
+</section>
 <div id="lesson-help" role="dialog" aria-labelledby="lesson-help-title" hidden>
   <div class="lesson-card">
     <h2 id="lesson-help-title">遊び方</h2>
     <ol>
-      <li>右のパネルで、ロボットと状況（氷の床、荷物、段差など）を選ぶ。</li>
+      <li>右のパネルで、ロボットと状況（氷の床、荷物、段差など）を選ぶ。左の「環境の条件」で、床の摩擦、荷物の重さ、重力をその場で変えられる。</li>
       <li>ロボットをクリックすると押せる。押す強さは、パネルの「マウスで触る」で変えられる。</li>
       <li>「自分で操作」を入れると、歩く向きと速さをスライダで決められる。入れないと、ロボットが自分で向きと速さを変える。</li>
       <li>押したあと立て直したか、倒れたかを、下のボタンで数える。倒れたら「最初から」。</li>
@@ -161,6 +187,52 @@ _BODY = r"""<nav id="lesson-nav" aria-label="ページの切り替え">
   #lesson-nav a:hover { color: var(--lesson-fg); background: rgba(255, 255, 255, 0.08); }
   #lesson-nav [aria-current="page"] { color: #fff; background: var(--lesson-accent); }
   #lesson-nav a:focus-visible { outline: 2px solid #9cc3ff; outline-offset: 2px; }
+  #lesson-env {
+    position: fixed;
+    z-index: 10000;
+    top: 64px;
+    left: 16px;
+    width: 280px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    background: var(--lesson-bg);
+    color: var(--lesson-fg);
+    font: 13px/1.5 var(--lesson-font);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  }
+  #lesson-env[hidden] { display: none; }
+  #lesson-env-toggle {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    font: 600 14px/1.3 var(--lesson-font);
+    color: inherit;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+  #lesson-env-toggle[aria-expanded="false"] .lesson-env-caret { transform: rotate(-90deg); }
+  #lesson-env-body { padding: 0 14px 12px; }
+  #lesson-env-toggle[aria-expanded="false"] + #lesson-env-body { display: none; }
+  .lesson-env-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 8px;
+    color: var(--lesson-muted);
+  }
+  .lesson-env-name { color: var(--lesson-fg); }
+  .lesson-env-value { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #lesson-env input[type="range"] {
+    width: 100%;
+    margin: 4px 0 2px;
+    accent-color: var(--lesson-accent);
+  }
+  #lesson-env.is-default-friction #env-friction { opacity: 0.55; }
+  .lesson-env-note { margin: 8px 0 0; font-size: 12px; color: var(--lesson-muted); }
+  #env-reset { padding: 4px 0; margin-top: 6px; }
   #lesson-help {
     position: fixed;
     inset: 0;
@@ -200,6 +272,7 @@ _BODY = r"""<nav id="lesson-nav" aria-label="ページの切り替え">
   }
   @media (max-width: 760px) {
     #lesson-bar { flex-wrap: wrap; }
+    #lesson-env { width: calc(100vw - 32px); max-width: 320px; }
   }
   @media (max-width: 640px) {
     #lesson-bar { bottom: 8px; padding: 6px 8px; gap: 6px; font-size: 14px; }
@@ -283,7 +356,7 @@ _BODY = r"""<nav id="lesson-nav" aria-label="ページの切り替え">
     var node, todo = [];
     while ((node = walker.nextNode())) {
       var parent = node.parentElement;
-      if (!parent || parent.closest("#lesson-bar, #lesson-help, #lesson-nav, script, style, noscript")) continue;
+      if (!parent || parent.closest("#lesson-bar, #lesson-help, #lesson-nav, #lesson-env, script, style, noscript")) continue;
       todo.push(node);
     }
     todo.forEach(function (n) {
@@ -359,6 +432,98 @@ _BODY = r"""<nav id="lesson-nav" aria-label="ページの切り替え">
     if (window.__mjswanReady) choosePush();
     if ((pushed && opened) || tries > 240) window.clearInterval(timer);
   }, 500);
+
+  // ---- environment sliders (see env.py) ----
+  // window.__paspModel is set by the plugin event on every reset. The values below are
+  // written into that model; a new model (another scene) puts the sliders back.
+  var envBox = document.getElementById("lesson-env");
+  var envToggle = document.getElementById("lesson-env-toggle");
+  var fr = document.getElementById("env-friction");
+  var pl = document.getElementById("env-payload");
+  var gr = document.getElementById("env-gravity");
+  var env = {friction: null, payload: 0, gravity: 1};
+  var snap = null;
+  var TORSO = ["torso_link", "trunk", "base_link", "base"];
+
+  try {
+    if (window.localStorage.getItem("pasp-env-closed") === "1" || window.innerWidth < 760) {
+      envToggle.setAttribute("aria-expanded", "false");
+    }
+  } catch (e) {}
+  envToggle.addEventListener("click", function () {
+    var open = envToggle.getAttribute("aria-expanded") !== "true";
+    envToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    try { window.localStorage.setItem("pasp-env-closed", open ? "0" : "1"); } catch (e) {}
+  });
+
+  function bodyName(m, b) {
+    var names = m.names, start = m.name_bodyadr[b], end = start;
+    while (end < names.length && names[end] !== 0) end++;
+    return new TextDecoder("utf-8").decode(names.subarray(start, end));
+  }
+  function takeSnapshot(m) {
+    var s = {model: m, friction: Float64Array.from(m.geom_friction), mass: Float64Array.from(m.body_mass),
+      gravity: Float64Array.from(m.opt.gravity), torso: -1, robotMass: 0, floor: null};
+    for (var g = 0; g < m.ngeom; g++) {
+      if (m.geom_type[g] === 0) { s.floor = m.geom_friction[3 * g]; break; }
+    }
+    var found = {};
+    for (var b = 1; b < m.nbody; b++) {
+      var n = bodyName(m, b).toLowerCase();
+      var bare = n.split("/").pop();
+      if (TORSO.indexOf(bare) >= 0 && !(bare in found)) found[bare] = b;
+    }
+    for (var i = 0; i < TORSO.length; i++) {
+      if (TORSO[i] in found) { s.torso = found[TORSO[i]]; break; }
+    }
+    if (s.torso >= 0) {
+      var root = m.body_rootid[s.torso];
+      for (var k = 1; k < m.nbody; k++) if (m.body_rootid[k] === root) s.robotMass += m.body_mass[k];
+    }
+    return s;
+  }
+  function paintEnv() {
+    document.getElementById("env-friction-value").textContent = env.friction === null
+      ? "シーンのまま" + (snap && snap.floor !== null ? "（" + snap.floor.toFixed(2) + "）" : "")
+      : env.friction.toFixed(2);
+    envBox.classList.toggle("is-default-friction", env.friction === null);
+    var kg = snap && snap.robotMass ? "、約" + (env.payload / 100 * snap.robotMass).toFixed(1) + "kg" : "";
+    var hasTorso = !snap || snap.torso >= 0;
+    document.getElementById("env-payload-value").textContent = !hasTorso ? "載せられない"
+      : env.payload === 0 ? "なし" : "ロボットの" + env.payload + "%" + kg;
+    document.getElementById("env-gravity-value").textContent = env.gravity.toFixed(1);
+    pl.disabled = !hasTorso;
+    pl.title = hasTorso ? "" : "このロボットには荷物を載せる胴がない";
+  }
+  function envDefaults() {
+    env = {friction: null, payload: 0, gravity: 1};
+    fr.value = snap && snap.floor !== null ? String(snap.floor) : "1";
+    pl.value = "0";
+    gr.value = "1";
+  }
+  function applyEnv() {
+    var h = window.__paspModel;
+    if (!h || !h.mjModel) return;
+    var m = h.mjModel;
+    if (!snap || snap.model !== m) { snap = takeSnapshot(m); envDefaults(); }
+    var f = m.geom_friction;
+    for (var g = 0; g < m.ngeom; g++) f[3 * g] = env.friction === null ? snap.friction[3 * g] : env.friction;
+    if (snap.torso >= 0) {
+      m.body_mass[snap.torso] = snap.mass[snap.torso] + (env.payload / 100) * snap.robotMass;
+      if (h.mujoco && h.mjData && h.mujoco.mj_setConst) h.mujoco.mj_setConst(m, h.mjData);
+    }
+    var gv = m.opt.gravity;
+    for (var a = 0; a < 3; a++) gv[a] = snap.gravity[a] * env.gravity;
+    paintEnv();
+  }
+  window.__paspApply = applyEnv;
+  window.__paspEnv = function () { return {env: env, snap: snap}; };
+  fr.addEventListener("input", function () { env.friction = parseFloat(fr.value); applyEnv(); });
+  pl.addEventListener("input", function () { env.payload = parseInt(pl.value, 10); applyEnv(); });
+  gr.addEventListener("input", function () { env.gravity = parseFloat(gr.value); applyEnv(); });
+  document.getElementById("env-reset").addEventListener("click", function () { envDefaults(); applyEnv(); });
+  paintEnv();
+  if (window.__paspModel) applyEnv();
 
   // ---- page title ----
   function title() { if (document.title !== "__TITLE__") document.title = "__TITLE__"; }

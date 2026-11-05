@@ -156,6 +156,9 @@ def run_build(base_path: str) -> int:
     localize(site)
     projects = json.loads((site / "manifest.json").read_text())["projects"]
     inject(site / "index.html")
+    from physical_ai_sim_playground.env import install as install_env
+
+    install_env(site)
 
     from physical_ai_sim_playground.physics import install as install_physics
 
@@ -388,6 +391,7 @@ def _asset_rels(dist: Path) -> list[str]:
         "manifest.json",
         "THIRD_PARTY_LICENSES.md",
         "physics/index.html",
+        "pasp-plugins.js",
     ]
     suffixes = {".wasm", ".onnx", ".mjz", ".js", ".npz"}
     rels: list[str] = []
