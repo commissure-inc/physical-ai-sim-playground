@@ -1,5 +1,5 @@
-"""The coefficient page at ``dist/physics/``: four experiments where the attendee
-changes friction, damping, mass or the time step and sees what changes.
+"""The coefficient page at the site root (``dist/``): four experiments where the
+attendee changes friction, damping, mass or the time step and sees what changes.
 
 The page is zalo/mujoco_wasm (MIT) with the experiments added and the panel in
 Japanese. Its sources and scenes live in ``physics/`` at the repository root. The
@@ -58,13 +58,13 @@ def cache_dir() -> Path:
 
 
 def install(root: Path, site: Path) -> None:
-    """Copy ``root/physics`` to ``site/physics`` and add the pinned libraries under ``lib/``."""
+    """Copy ``root/physics`` to ``site`` and add the pinned libraries under ``lib/``."""
     source = root / "physics"
-    dest = site / "physics"
-    if dest.exists():
-        shutil.rmtree(dest)
-    shutil.copytree(source, dest)
-    lib = dest / "lib"
+    site.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source, site, dirs_exist_ok=True)
+    lib = site / "lib"
+    if lib.exists():
+        shutil.rmtree(lib)
     for name, version, integrity, files in PACKAGES:
         tarball = _fetch(name, version, integrity)
         with tarfile.open(fileobj=io.BytesIO(tarball), mode="r:gz") as archive:

@@ -1,13 +1,13 @@
 """Japanese UI over the stock mjswan viewer.
 
-Three things are added to the built ``index.html``:
+Three things are added to the built ``robot/index.html``:
 
 - a head script that opens the viewer with debug drawings off (``?debug=0``) unless the
   URL says otherwise;
 - a script that renames the labels the viewer draws itself, hides the rows an attendee
   does not need (field of view, the policy picker...), and starts the pointer in Push;
 - the lesson bar (reset, two counters), a short "how to play" card, a tab that
-  switches to the coefficient page at ``physics/`` (see ``physics.py``), and the
+  switches to the coefficient page at the site root (see ``physics.py``), and the
   "環境の条件" panel: live sliders for floor friction, payload and gravity, written into
   the running model that the plugin event of ``env.py`` hands to the page.
 
@@ -36,8 +36,8 @@ _HEAD = MARK + """
 </script>"""
 
 _BODY = r"""<nav id="lesson-nav" aria-label="ページの切り替え">
+  <a href="../" id="lesson-nav-physics">係数を変える</a>
   <span aria-current="page">ロボットで試す</span>
-  <a href="./physics/" id="lesson-nav-physics">係数を変える</a>
 </nav>
 <section id="lesson-env" aria-labelledby="lesson-env-title">
   <button type="button" id="lesson-env-toggle" aria-expanded="true">
@@ -313,7 +313,7 @@ _BODY = r"""<nav id="lesson-nav" aria-label="ページの切り替え">
   try { seen = window.localStorage.getItem(SEEN) === "1"; } catch (e) {}
   if (!seen && !/[?&]help=0(&|$)/.test(window.location.search)) openHelp();
   if (/[?&]help=0(&|$)/.test(window.location.search)) {
-    document.getElementById("lesson-nav-physics").href = "./physics/?help=0";
+    document.getElementById("lesson-nav-physics").href = "../?help=0";
   }
 
   // ---- the viewer's own labels ----

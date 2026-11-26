@@ -196,8 +196,8 @@
 </head>
 <body>
   <nav id="lesson-nav" aria-label="ページの切り替え">
-    <a href="../">ロボットで試す</a>
     <span aria-current="page">係数を変える</span>
+    <a href="./robot/">ロボットで試す</a>
   </nav>
   <div id="lesson">
     <p id="lesson-text">右のパネルでシーンを選び、スライダを動かす。</p>
@@ -243,9 +243,9 @@
       try { seen = window.localStorage.getItem(SEEN) === "1"; } catch (e) {}
       if (!seen && !/[?&]help=0(&|$)/.test(window.location.search)) openHelp();
 
-      // Keep ?help=0 on the link back, so a checked-off card stays closed there too.
-      var back = document.querySelector('#lesson-nav a');
-      if (/[?&]help=0(&|$)/.test(window.location.search)) back.href = "../?help=0";
+      // Keep ?help=0 on the link to the robot page, so a checked-off card stays closed there too.
+      var robot = document.querySelector('#lesson-nav a');
+      if (/[?&]help=0(&|$)/.test(window.location.search)) robot.href = "./robot/?help=0";
 
       var loading = document.getElementById("loading");
       var timer = window.setInterval(function () {

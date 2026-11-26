@@ -50,9 +50,10 @@ def problems(dist: Path) -> list[str]:
                 if marker.search(text):
                     found.append(f"{relative} matches {marker.pattern}")
                     break
-    manifest = dist / "manifest.json"
-    if manifest.is_file():
-        found.extend(_spdx_problems(json.loads(manifest.read_text())))
+    for manifest in sorted(dist.rglob("manifest.json")):
+        if manifest.is_file():
+            rel = manifest.relative_to(dist).as_posix()
+            found.extend(_spdx_problems(json.loads(manifest.read_text()), where=rel))
     return found
 
 

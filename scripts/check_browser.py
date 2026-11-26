@@ -69,12 +69,13 @@ def main() -> None:
     )
     args = parser.parse_args()
     site = args.site.resolve()
-    manifest = json.loads((site / "manifest.json").read_text())
+    robot_dir = site / "robot"
+    manifest = json.loads((robot_dir / "manifest.json").read_text())
     projects = manifest.get("projects") or []
     if not projects:
         print("manifest.json has no projects", file=sys.stderr)
         raise SystemExit(1)
-    base = args.base_path or _base_path((site / "index.html").read_text())
+    base = args.base_path or _base_path((robot_dir / "index.html").read_text())
 
     from playwright.sync_api import Error as PlaywrightError
     from playwright.sync_api import sync_playwright
@@ -95,6 +96,9 @@ def main() -> None:
             with sync_playwright() as playwright:
                 browser = _launch(playwright)
                 failed = False
+                for scene_id in PHYSICS_SCENES:
+                    problem = _check_physics(browser, origin, scene_id, PlaywrightError)
+                    failed = failed or problem is not None
                 first = True
                 for project in projects:
                     scenes = project.get("scenes") or [None]
@@ -110,9 +114,6 @@ def main() -> None:
                         )
                         first = False
                         failed = failed or problem is not None
-                for scene_id in PHYSICS_SCENES:
-                    problem = _check_physics(browser, origin, scene_id, PlaywrightError)
-                    failed = failed or problem is not None
                 browser.close()
             server.shutdown()
     raise SystemExit(1 if failed else 0)
@@ -160,7 +161,7 @@ def _check(
     query = f"?help=0&project={project_id}"
     if scene_id:
         query += f"&scene={scene_id}"
-    page.goto(f"{origin}{query}")
+    page.goto(f"{origin}robot/{query}")
     state = "timed out"
     try:
         page.wait_for_function(
@@ -172,7 +173,7 @@ def _check(
     except playwright_error:
         pass
     if exercise_lesson and state == "ready":
-        _exercise_lesson(page, errors)
+        _exercise_lesson(page, origin, errors)
     rate = None
     if measure and state == "ready":
         rate = _step_rate(page, float(scene.get("control_dt") or 0) if scene else 0)
@@ -217,7 +218,9 @@ def _check_physics(browser, origin: str, scene_id: str, playwright_error: type) 
     page.on("console", lambda msg: errors.append(msg.text) if msg.type == "error" else None)
     page.on("response", lambda response: _note_http(response, failed))
     start = time.monotonic()
-    page.goto(f"{origin}physics/?help=0&scene={scene_id}")
+    # The first scene is also the default root page, so open it without ?scene=.
+    url = f"{origin}?help=0" if scene_id == PHYSICS_SCENES[0] else f"{origin}?help=0&scene={scene_id}"
+    page.goto(url)
     state = "timed out"
     try:
         page.wait_for_function("() => window.__physicsReady", timeout=READY_TIMEOUT_MS)
@@ -240,10 +243,10 @@ def _check_physics(browser, origin: str, scene_id: str, playwright_error: type) 
         if page.evaluate("() => !document.getElementById('loading').hidden"):
             errors.append("loading message still shown")
         if scene_id == PHYSICS_SCENES[0]:
-            # The tab back to the robot page resolves inside the site.
+            # The tab to the robot page resolves to <origin>robot/.
             href = page.evaluate("() => document.querySelector('#lesson-nav a').href")
-            if not href.startswith(origin):
-                errors.append(f"tab back points outside the site: {href}")
+            if not href.startswith(f"{origin}robot/"):
+                errors.append(f"robot tab points to unexpected URL: {href}")
     seconds = time.monotonic() - start
     page.close()
     problem = state if state != "ready" else (errors[0] if errors else (failed[0] if failed else None))
@@ -255,12 +258,15 @@ def _check_physics(browser, origin: str, scene_id: str, playwright_error: type) 
     return problem
 
 
-def _exercise_lesson(page, errors: list[str]) -> None:
+def _exercise_lesson(page, origin: str, errors: list[str]) -> None:
     page.wait_for_timeout(1500)
     body = page.inner_text("body")
     for japanese in ("状況", "マウスで触る", "自分で操作", "係数を変える"):
         if japanese not in body:
             errors.append(f"Japanese label missing: {japanese}")
+    href = page.evaluate("() => document.querySelector('#lesson-nav a').href")
+    if not href.startswith(origin) or href.startswith(f"{origin}robot/"):
+        errors.append(f"physics tab points to unexpected URL: {href}")
     for english in ("lin_vel_x", "Interact", "Debug Viz", "FOV", "Max lin_vel_x"):
         if english in body:
             errors.append(f"English label still shown: {english}")
@@ -328,7 +334,10 @@ def _base_path(index_html: str) -> str:
     assets = rest.find(marker)
     if assets <= 0 or not rest.startswith("/"):
         return "/"
-    return rest[:assets] + "/"
+    prefix = rest[:assets] + "/"
+    if prefix.endswith("/robot/"):
+        return prefix[: -len("robot/")]
+    return prefix
 
 
 if __name__ == "__main__":

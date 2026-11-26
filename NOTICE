@@ -141,8 +141,8 @@ MuJoCo 3.17 wasm build no longer accepts; nothing else in it is changed.
 
 The libraries the page loads are fetched from the npm registry at build time:
 
-- three 0.181.2, MIT (dist/physics/lib/three/LICENSE)
-- @mujoco/mujoco 3.17.0, Apache-2.0 (dist/physics/lib/mujoco/NOTICE; the
+- three 0.181.2, MIT (dist/lib/three/LICENSE)
+- @mujoco/mujoco 3.17.0, Apache-2.0 (dist/lib/mujoco/NOTICE; the
   package ships no LICENSE file, its package.json states Apache-2.0)
 
 --------------------------------------------------------------------------------

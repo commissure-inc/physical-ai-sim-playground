@@ -1,4 +1,4 @@
-"""Japanese names and labels for the merged site, written into ``dist/manifest.json``.
+"""Japanese names and labels for the merged site, written into ``dist/robot/manifest.json``.
 
 The stock viewer reads project, scene, policy and command labels from the manifest,
 so they are renamed here. Labels the viewer itself draws (``Scene``, ``Interact``,

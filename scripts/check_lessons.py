@@ -35,7 +35,8 @@ def main() -> None:
     parser.add_argument("site", type=Path, help="directory written by `uv run build`")
     args = parser.parse_args()
     site = args.site.resolve()
-    manifest = json.loads((site / "manifest.json").read_text())
+    robot = site / "robot" if (site / "robot" / "manifest.json").is_file() else site
+    manifest = json.loads((robot / "manifest.json").read_text())
     import onnxruntime as ort
 
     failed = False
@@ -46,7 +47,7 @@ def main() -> None:
         for scene in project.get("scenes") or []:
             if scene.get("name") not in LESSONS:
                 continue
-            row = _run(site, project, scene, ort)
+            row = _run(robot, project, scene, ort)
             rows.append(row)
             print(
                 f"{project['id']:<22} {scene['name']:<8} "

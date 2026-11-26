@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import os
+import posixpath
 import re
 import shutil
 import subprocess
@@ -142,9 +143,14 @@ def run_build(base_path: str) -> int:
     from mjswan_playground._site import SIZE_LIMIT, SiteError, install_engine, merge, size
 
     site = root / "dist"
+    if site.exists():
+        _rmtree(site)
+    site.mkdir(parents=True)
+    robot = site / "robot"
+    robot_base = base_path + "robot/"
     try:
-        projects = merge(built, site)
-        install_engine(site, base_path)
+        projects = merge(built, robot)
+        install_engine(robot, robot_base)
     except SiteError as exc:
         print(f"\nCould not assemble the site: {exc}", file=sys.stderr)
         _print_failures(failed)
@@ -153,12 +159,12 @@ def run_build(base_path: str) -> int:
     from physical_ai_sim_playground.localize import localize
     from physical_ai_sim_playground.overlay import inject
 
-    localize(site)
-    projects = json.loads((site / "manifest.json").read_text())["projects"]
-    inject(site / "index.html")
+    localize(robot)
+    projects = json.loads((robot / "manifest.json").read_text())["projects"]
+    inject(robot / "index.html")
     from physical_ai_sim_playground.env import install as install_env
 
-    install_env(site)
+    install_env(robot)
 
     from physical_ai_sim_playground.physics import install as install_physics
 
@@ -170,17 +176,18 @@ def run_build(base_path: str) -> int:
         return 1
     print("\n=== site ===", flush=True)
     for project in projects:
-        nbytes = size(site / project["id"])
+        nbytes = size(robot / project["id"])
         scenes = ", ".join(
             scene.get("name", scene.get("id", "?")) for scene in project.get("scenes", [])
         )
         print(f"{project['id']:<28} {nbytes / 1e6:8.1f} MB  {scenes}", flush=True)
         for scene in project.get("scenes", []):
-            scene_dir = site / project["id"] / scene["id"]
+            scene_dir = robot / project["id"] / scene["id"]
             if scene_dir.is_dir():
                 print(f"  {scene['id']:<32} {size(scene_dir) / 1e6:8.1f} MB", flush=True)
-    print(f"{'physics (coefficient page)':<28} {size(site / 'physics') / 1e6:8.1f} MB", flush=True)
     site_bytes = size(site)
+    physics_bytes = site_bytes - size(robot)
+    print(f"{'root (coefficient page)':<28} {physics_bytes / 1e6:8.1f} MB", flush=True)
     print(f"{'dist/, engine included':<28} {site_bytes / 1e6:8.1f} MB", flush=True)
     print(f"wrote {site}", flush=True)
     from physical_ai_sim_playground.licenses import problems
@@ -217,21 +224,26 @@ def run_serve(host: str, port: int, *, open_browser: bool) -> int:
 
 def run_verify(dist: Path) -> int:
     index = dist / "index.html"
+    robot = dist / "robot"
+    robot_index = robot / "index.html"
     if not index.is_file():
         print(f"{index} is missing. Run `uv run build` first.", file=sys.stderr)
         return 1
+    if not robot_index.is_file():
+        print(f"{robot_index} is missing. Run `uv run build` first.", file=sys.stderr)
+        return 1
 
     problems: list[str] = []
-    logo = dist / "logo.svg"
+    logo = robot / "logo.svg"
     engine_logo = _engine_logo()
     if not logo.is_file():
-        problems.append("dist/logo.svg is missing (mjswan's swan icon)")
+        problems.append("dist/robot/logo.svg is missing (mjswan's swan icon)")
     elif engine_logo is not None and _sha256(logo) != _sha256(engine_logo):
         problems.append(
-            f"dist/logo.svg differs from mjswan's {engine_logo} (the swan icon must stay)"
+            f"dist/robot/logo.svg differs from mjswan's {engine_logo} (the swan icon must stay)"
         )
     else:
-        print(f"ok  logo.svg matches mjswan ({logo.stat().st_size} bytes)")
+        print(f"ok  robot/logo.svg matches mjswan ({logo.stat().st_size} bytes)")
 
     js = "\n".join(path.read_text(errors="ignore") for path in dist.rglob("*.js"))
     if "powered by mjswan" not in js:
@@ -239,13 +251,19 @@ def run_verify(dist: Path) -> int:
     else:
         print('ok  viewer bundle contains "powered by mjswan"')
 
-    page = index.read_text(errors="ignore")
+    root_page = index.read_text(errors="ignore")
+    for label in ("係数を変える", "ロボットで試す"):
+        if label not in root_page:
+            problems.append(f"index.html has no navigation label {label}")
+        else:
+            print(f"ok  root navigation label {label}")
+
+    robot_page = robot_index.read_text(errors="ignore")
     for label in ("最初から", "立て直した", "倒れた", "係数を変える"):
-        if label not in page:
-            problems.append(f"index.html has no lesson control {label}")
+        if label not in robot_page:
+            problems.append(f"robot/index.html has no lesson control {label}")
         else:
             print(f"ok  lesson control {label}")
-    physics = dist / "physics"
     for rel in (
         "index.html",
         "src/main.js",
@@ -255,8 +273,8 @@ def run_verify(dist: Path) -> int:
         "lib/mujoco/mujoco.wasm",
         "scenes/exp_ramp.xml",
     ):
-        if not (physics / rel).is_file():
-            problems.append(f"physics/{rel} is missing (coefficient page)")
+        if not (dist / rel).is_file():
+            problems.append(f"{rel} is missing (coefficient page)")
     from physical_ai_sim_playground.licenses import problems as license_problems
 
     found = license_problems(dist)
@@ -264,14 +282,18 @@ def run_verify(dist: Path) -> int:
     if not found:
         print("ok  license scan")
 
-    base = _base_path(page)
+    base = _base_path(robot_page)
     rels = _asset_rels(dist)
-    for rel in _referenced(index.read_text(errors="ignore"), base):
-        if rel not in rels:
-            if (dist / rel).is_file():
-                rels.append(rel)
-            else:
-                problems.append(f"index.html references missing file {rel}")
+    for html, subdir, label in (
+        (root_page, "", "index.html"),
+        (robot_page, "robot", "robot/index.html"),
+    ):
+        for rel in _referenced(html, base, subdir):
+            if rel not in rels:
+                if (dist / rel).is_file():
+                    rels.append(rel)
+                else:
+                    problems.append(f"{label} references missing file {rel}")
     if not any(rel.endswith(".wasm") for rel in rels):
         problems.append("no .wasm file under dist/")
     if not any(rel.endswith(".onnx") for rel in rels):
@@ -349,7 +371,7 @@ def _sha256(path: Path) -> str:
 
 
 def _base_path(index_html: str) -> str:
-    """The prefix Vite wrote into the first absolute asset URL, or `/`."""
+    """The site base prefix from Vite's absolute asset URL in ``robot/index.html``, or ``/``."""
     for token in ('src="', "href='", 'href="', "src='"):
         start = index_html.find(token)
         if start < 0:
@@ -357,11 +379,14 @@ def _base_path(index_html: str) -> str:
         rest = index_html[start + len(token) :]
         if not rest.startswith("/"):
             continue
-        # /assets/... or /<repo>/assets/...
+        # /robot/assets/... or /<repo>/robot/assets/...
         assets = rest.find("/assets/")
         if assets < 0:
             continue
-        return rest[:assets] + "/" if assets else "/"
+        prefix = rest[:assets] + "/" if assets else "/"
+        if prefix.endswith("/robot/"):
+            return prefix[: -len("robot/")]
+        return prefix
     return "/"
 
 
@@ -387,11 +412,11 @@ def _asset_rels(dist: Path) -> list[str]:
     """Paths relative to the site root for the page and the simulator's files."""
     names = [
         "index.html",
-        "logo.svg",
-        "manifest.json",
-        "THIRD_PARTY_LICENSES.md",
-        "physics/index.html",
-        "pasp-plugins.js",
+        "robot/index.html",
+        "robot/logo.svg",
+        "robot/manifest.json",
+        "robot/THIRD_PARTY_LICENSES.md",
+        "robot/pasp-plugins.js",
     ]
     suffixes = {".wasm", ".onnx", ".mjz", ".js", ".npz"}
     rels: list[str] = []
@@ -411,7 +436,7 @@ def _asset_rels(dist: Path) -> list[str]:
         if path.is_file() and path.suffix.lower() in suffixes and "node_modules" not in path.parts:
             add(path)
     # The coefficient page fetches its scenes by name, so request every one of them.
-    scenes = dist / "physics" / "scenes"
+    scenes = dist / "scenes"
     if scenes.is_dir():
         for path in sorted(scenes.rglob("*")):
             if path.is_file() and path.suffix.lower() in {".xml", ".obj", ".png"}:
@@ -419,19 +444,29 @@ def _asset_rels(dist: Path) -> list[str]:
     return rels
 
 
-def _referenced(index_html: str, base: str) -> list[str]:
+def _referenced(index_html: str, base: str, subdir: str = "") -> list[str]:
     rels = []
     for match in re.findall(r'(?:src|href)="([^"]+)"', index_html):
         if match.startswith(("http://", "https://", "data:")):
             continue
         path = match.split("?", 1)[0].split("#", 1)[0]
-        if path.startswith(base):
-            path = path[len(base) :]
-        if path.startswith("./"):
-            path = path[2:]
-        path = path.lstrip("/")
-        if path.endswith("/"):
-            path += "index.html"  # a link to a page directory, e.g. ./physics/
+        if not path:
+            continue
+        is_dir = path.endswith("/")
+        if path.startswith("/"):
+            if path.startswith(base):
+                path = path[len(base) :]
+            path = path.lstrip("/")
+        elif subdir:
+            path = posixpath.normpath(posixpath.join(subdir, path))
+            if path == ".":
+                path = ""
+        else:
+            path = posixpath.normpath(path)
+            if path == ".":
+                path = ""
+        if is_dir:
+            path = (path + "/" if path else "") + "index.html"  # e.g. ./robot/ or ../
         if path:
             rels.append(path)
     return rels
